@@ -3,6 +3,8 @@
 const express = require('express');
 const cors = require("cors");//不太懂
 const bodyParser = require('body-parser');
+const http = require('http');
+const { Server } = require('socket.io')
 
 // --------------- 未用到 ---------------
 
@@ -15,8 +17,20 @@ const path = require('path');
 
 // --------------- 開始 express ---------------
 var app = express();
-app.listen(8000);
-console.log('http://127.0.0.1:8000');
+
+// ---------- 0307 connect -----------------
+
+const server = http.createServer(app);
+
+server.listen(8000, () => {
+    console.log("Server Start: http://127.0.0.1:8000")
+})
+
+// ------------------------------------------
+
+// app.listen(8000);
+// console.log('http://127.0.0.1:8000');
+
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -27,13 +41,29 @@ app.use(session({
     saveUninitialized: false,
 }))
 
-app.use(cors());
 app.use(bodyParser.json({limit: "50mb"}));
 app.use(express.json({limit : '2100000kb'}));
 app.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit:50000}));
 
 
+// -------------- stock.io -----------------
 
+const io = new Server(server, {
+    cors: {
+        origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+        method: ["GET", "POST"]
+    }
+});
+
+io.on("connection", socket => {
+    console.log("USER_CONNECT_ID ", socket.id);
+
+
+
+    socket.on("disconnect", () =>{
+        console.log(socket.id, " DISCONNECT")
+    })
+})
 
 // --------------- 資料庫連接 ---------------
 // 資料庫已被獨立出一個檔案，沿用下列語法可以到不同檔案使用資料庫

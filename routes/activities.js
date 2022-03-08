@@ -2,6 +2,17 @@ var express = require('express');
 var router = express.Router();
 var conn = require('../mysql');
 
+let query = function (sql, values) {
+    return new Promise((resolve, reject) => {
+      conn.query(sql, values, function (err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(rows)
+        }
+      })
+    })
+  }
 
 //filter 地點 時間 類型 室內外 排序
 
@@ -9,15 +20,17 @@ var conn = require('../mysql');
 //渲染活動列表
 //update event
 router.get('/event/show', function (req, res) {
-    conn.query('select * from event ORDER BY eventID DESC', [],
+    conn.query('select * from event ORDER BY post_datetime ', [],
         function (err, rows) {
             res.send(JSON.stringify(rows))
         })
 })
 // or `address` LIKE "%?%" or `introduction` Like "%?%"
 //渲染搜尋結果
+
+
 router.post('/event/activityList/Search',function(req,res){
-    console.log(req.body.ActivitySearchContent.ActivitySearchInputLocation);
+    // console.log(req.body.ActivitySearchContent.ActivitySearchInputLocation);
     conn.query('SELECT * FROM `event` WHERE `title` LIKE ? or `introduction` like ? or  `address` LIKE ? ',[req.body.ActivitySearchContent.ActivitySearchInputValue,req.body.ActivitySearchContent.ActivitySearchInputValue,req.body.ActivitySearchContent.ActivitySearchInputLocation],
     function(err,row){
         res.send(JSON.stringify(row))
@@ -36,7 +49,7 @@ router.post('/event/activityList/Search',function(req,res){
 //     res.send(result);
 // })
 
-
+//點擊前往對應頁面
 router.get("/event/activityIntroduceContent/:id", function (req, res) {
     conn.query("SELECT * FROM `event` a JOIN member b where a.eventID = ? and a.post_email=b.email",
         // conn.query("select * from event where eventID = ?", 
@@ -81,8 +94,8 @@ router.post('/event/conduct', function (req, res) {
             req.body.postNewEvent.indoor,
             req.body.postNewEvent.content,
             req.body.postNewEvent.precaution], function (err, row) {   
-                console.log(row);
-                console.log(row.insertId);
+                // console.log(row);
+                // console.log(row.insertId);
                    let nowEventNum =row.insertId.toString()
                    res.send(nowEventNum)
                 // conn.query('INSERT INTO (`user_ID`)VALUES (?)',[user_ID],function (err, row){
@@ -97,7 +110,7 @@ router.post('/event/conduct', function (req, res) {
 
 
 
-//送出邀請成功
+// //送出邀請成功
 router.post('/event/activityIntroduce/invite', function (req, res) {
     conn.query('select * from member where id = ? ', [req.body.sendID.user_gmail], function (err, row) {
         let userEmail = row[0].email;
@@ -106,15 +119,25 @@ router.post('/event/activityIntroduce/invite', function (req, res) {
             req.body.sendID.eventID,
             userEmail 
            ], function (err, row) {   
-            console.log(req.body.sendID.eventID);
-            console.log(typeof req.body.sendID.eventID);
-            console.log(userEmail);
-            console.log(typeof userEmail);
+            // console.log(req.body.sendID.eventID);
+            // console.log(typeof req.body.sendID.eventID);
+            // console.log(userEmail);
+            // console.log(typeof userEmail);
             console.log("OK");
                 })
     })   
 })
 // })
+
+//顯示參加人數
+router.get('/activity/applicants/:eventID', async function (req, res) {
+    let sql1 = "select user_ID from event where eventID = ? ";
+    let result1 = await query(sql1, [req.params.eventID]);
+    let sql2 = "select concat(m.lastName, m.firstName)name, m.id, m.api_selfie from member m join event_apply_member a on (a.apply_member_email = m.email) where a.confirmed = 1 and a.eventID = ? ";
+    let result2 = await query(sql2, [req.params.eventID]);
+    let results = [result1, result2]
+    res.send(results);
+})
 
 module.exports = router;
 
