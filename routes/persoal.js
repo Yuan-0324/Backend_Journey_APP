@@ -50,7 +50,7 @@ router.post('/personal/personal/bannner/change', async function (req, res) {
 
 // --- 上傳 Personal Profile ---
 
-router.post('/personal/personal/profile/change', async function(req, res){
+router.post('/personal/personal/profile/change', async function (req, res) {
   let sql = "UPDATE `member` SET `api_selfie` = ? WHERE id = ?";
   let result = await query(sql, [req.body.url, req.body.id]);
   res.send('ok');
@@ -166,7 +166,7 @@ router.get('/personal/article_list/:id', async function (req, res) {
   let articles = await query(sql, [req.params.id]);
   let articleList = [];
   sql = "SELECT `member_email` FROM `article_likes` WHERE `articleID` = ?";
-  innerSQL = "SELECT `id`, `firstName`, `lastName`, `api_selfie` FROM `member` WHERE `email` = ?" 
+  innerSQL = "SELECT `id`, `firstName`, `lastName`, `api_selfie` FROM `member` WHERE `email` = ?"
   for (let i = 0; i < articles.length; i++) {
     let articleLikeMember = await query(sql, [articles[i].articleID]);
     articleLikeMember = articleLikeMember.map(follow => follow.member_email)
@@ -254,7 +254,7 @@ router.post('/personal/invitation/reply/activity/send', async function (req, res
 
 // 發送 社團
 router.post('/personal/invitation/reply/society/send', async function (req, res) {
-  let sql = "SELECT smr.`societyID`, smr.`confirmed_join`, smr.`apply_date`, s.`society_name` FROM `society_member_right` smr JOIN `society` s USING (`societyID`) WHERE smr.`member_email` = ? AND smr.`confirmed_join` IS NULL";
+  let sql = "SELECT smr.`societyID`, smr.`confirmed_join`, smr.`apply_date`, s.`society_name`, s.`selfie` FROM `society_member_right` smr JOIN `society` s USING (`societyID`) WHERE smr.`member_email` = ? AND smr.`confirmed_join` IS NULL";
   let result = await query(sql, [req.body.email]);
   res.send(result);
 })
@@ -285,5 +285,23 @@ router.delete('/personal/invitation/reply/society/cancel', async function (req, 
 // 收到 活動 [ 接受 / 拒絕 ]
 
 // 收到 社團 [ 接受 / 拒絕 ]
+
+
+
+// --- Chat Hisdtory ---
+
+router.get('/personal/chat/room/history/:roomID', async function (req, res) {
+  let sql = "SELECT * FROM `message_arr` WHERE `room_num` = ?";
+  let result = await query(sql, [req.params.roomID]);
+  res.send(result);
+})
+
+router.post('/personal/chat/room/add', async function (req, res) {
+  let sql = "INSERT INTO `message_arr` (`room_num`, `sender`, `receiver`, `message`) VALUES (?,?,?,?)";
+  let result = await query(sql, [req.body.room_num, req.body.sender, req.body.receiver, req.body.message]);
+  res.send(result);
+  // console.log(result);
+  console.log(req.body)
+})
 
 module.exports = router;

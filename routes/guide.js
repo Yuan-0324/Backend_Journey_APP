@@ -14,19 +14,26 @@ const query = function (sql, values) {
     })
 }
 
+//熱門嚮導(按點擊率)
+router.get(`/guideSearch/guidePopular`, async function (req, res) {
+    let sql = `select g.guide_id ,g.avg_star, g.level, CASE g.level WHEN 1 THEN 'Lv1.菜鳥嚮導' WHEN 2 THEN 'Lv2.在地嚮導' WHEN 3 THEN 'Lv3.進階嚮導' WHEN 4 THEN 'Lv4.高級嚮導' WHEN 5 THEN 'Lv5.資深嚮導' WHEN 6 THEN 'Lv6.頂尖嚮導' END 'level', g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, s.viewpoint, gl.logo from guide g join member m using (email) join guide_suggest s using (email) join guide_level_logo gl using (level) order by g.ctr desc limit 8`;
+    let result = await query(sql, []);
+    res.send(result);
+});
+
 //guideSearch
 //熱門嚮導(按點擊率)
-router.get(`/guideSearch/guidePopular`, function (req, res) {
-    // conn.query(`select g.guide_id, (CASE WHEN g.level=1 THEN 'Lv1.菜鳥嚮導' WHEN g.level=2 THEN 'Lv2.在地嚮導' WHEN g.level=3 THEN 'Lv3.進階嚮導' WHEN g.level=4 THEN 'Lv4.高級嚮導' WHEN g.level=5 THEN 'Lv5.資深嚮導' WHEN g.level=6 THEN 'Lv6.頂尖嚮導' END) level, g.avg_star, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, s.viewpoint from guide g join member m using (email) join guide_suggest s using (email) where g.avg_star>=4 order by g.ctr desc limit 8`, [],
-    //     function (err, row) {
-    //         res.send(JSON.stringify(row));
-    //     });
+// router.get(`/guideSearch/guidePopular`, function (req, res) {
+//     // conn.query(`select g.guide_id, (CASE WHEN g.level=1 THEN 'Lv1.菜鳥嚮導' WHEN g.level=2 THEN 'Lv2.在地嚮導' WHEN g.level=3 THEN 'Lv3.進階嚮導' WHEN g.level=4 THEN 'Lv4.高級嚮導' WHEN g.level=5 THEN 'Lv5.資深嚮導' WHEN g.level=6 THEN 'Lv6.頂尖嚮導' END) level, g.avg_star, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, s.viewpoint from guide g join member m using (email) join guide_suggest s using (email) where g.avg_star>=4 order by g.ctr desc limit 8`, [],
+//     //     function (err, row) {
+//     //         res.send(JSON.stringify(row));
+//     //     });
 
-    conn.query(`select g.guide_id, (CASE WHEN g.level=1 THEN 'Lv1.菜鳥嚮導' WHEN g.level=2 THEN 'Lv2.在地嚮導' WHEN g.level=3 THEN 'Lv3.進階嚮導' WHEN g.level=4 THEN 'Lv4.高級嚮導' WHEN g.level=5 THEN 'Lv5.資深嚮導' WHEN g.level=6 THEN 'Lv6.頂尖嚮導' END) level, g.avg_star, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, s.viewpoint from guide g join member m using (email) join guide_suggest s using (email) order by g.ctr desc limit 8`, [],
-        function (err, row) {
-            res.send(JSON.stringify(row));
-        });
-});
+//     conn.query(`select g.guide_id, (CASE WHEN g.level=1 THEN 'Lv1.菜鳥嚮導' WHEN g.level=2 THEN 'Lv2.在地嚮導' WHEN g.level=3 THEN 'Lv3.進階嚮導' WHEN g.level=4 THEN 'Lv4.高級嚮導' WHEN g.level=5 THEN 'Lv5.資深嚮導' WHEN g.level=6 THEN 'Lv6.頂尖嚮導' END) level, g.avg_star, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, s.viewpoint from guide g join member m using (email) join guide_suggest s using (email) order by g.ctr desc limit 8`, [],
+//         function (err, row) {
+//             res.send(JSON.stringify(row));
+//         });
+// });
 
 //搜尋嚮導
 router.post('/guideSearch/searchResults', async function (req, res) {
@@ -54,7 +61,7 @@ router.post('/guideSearch/searchResults', async function (req, res) {
     } else {
         date = 'AND g.email = ANY(SELECT a.email from guide_avaliable_date a where a.date = ?)'
     }
-    let sql = `select g.guide_id, CASE g.level WHEN 1 THEN 'Lv1.菜鳥嚮導' WHEN 2 THEN 'Lv2.在地嚮導' WHEN 3 THEN 'Lv3.進階嚮導' WHEN 4 THEN 'Lv4.高級嚮導' WHEN 5 THEN 'Lv5.資深嚮導' WHEN 6 THEN 'Lv6.頂尖嚮導' END 'level', g.avg_star, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, s.viewpoint from guide g join member m using (email) join guide_suggest s using (email) WHERE g.num_limit >= ? AND g.location = ? ${gender} ${vehicle} ${date}`;
+    let sql = `select g.guide_id, gl.logo, CASE g.level WHEN 1 THEN 'Lv1.菜鳥嚮導' WHEN 2 THEN 'Lv2.在地嚮導' WHEN 3 THEN 'Lv3.進階嚮導' WHEN 4 THEN 'Lv4.高級嚮導' WHEN 5 THEN 'Lv5.資深嚮導' WHEN 6 THEN 'Lv6.頂尖嚮導' END 'level', g.avg_star, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, s.viewpoint from guide g join member m using (email) join guide_suggest s using (email) join guide_level_logo gl using (level) WHERE g.num_limit >= ? AND g.location = ? ${gender} ${vehicle} ${date}`;    
     let result = await query(sql, [req.body.acceptNum, req.body.cityValue, req.body.dateValue]);
     res.send(result);
 })
@@ -106,7 +113,7 @@ router.post('/guideJoin', async function (req, res) {
 
 //topIntroduction
 router.get(`/guidePersonal/topIntroduction/:gId`, function (req, res) {
-    conn.query(`select g.level, g.avg_star, g.introduction, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie from guide g join member m using (email) where g.guide_id = ${req.params.gId}`, [],
+    conn.query(`select g.level, g.avg_star, g.introduction, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie, gl.logo from guide g join member m using (email) join guide_level_logo gl using (level) where g.guide_id = ${req.params.gId}`, [],
         function (err, row) {
             let result1 = row;
             conn.query(`select count(commentID)commentNum from guide_comment where reservation_number = ANY(select reservation_number from guide_member_reservation where guide_email = (select email from guide where guide_id = ${req.params.gId}))`, [],
@@ -116,6 +123,19 @@ router.get(`/guidePersonal/topIntroduction/:gId`, function (req, res) {
                 });
         });
 });
+
+//topIntroduction
+// router.get(`/guidePersonal/topIntroduction/:gId`, function (req, res) {
+//     conn.query(`select g.level, g.avg_star, g.introduction, g.location, concat(m.lastName, m.firstName)guide_name, m.api_selfie from guide g join member m using (email) where g.guide_id = ${req.params.gId}`, [],
+//         function (err, row) {
+//             let result1 = row;
+//             conn.query(`select count(commentID)commentNum from guide_comment where reservation_number = ANY(select reservation_number from guide_member_reservation where guide_email = (select email from guide where guide_id = ${req.params.gId}))`, [],
+//                 function (err, row) {
+//                     const result = { ...result1[0], ...row[0] }
+//                     res.send(result);
+//                 });
+//         });
+// });
 
 //aboutMe
 router.get(`/guidePersonal/aboutMe/:gId`, function (req, res) {
@@ -181,6 +201,7 @@ router.get(`/guide/calendar/:gId`, function (req, res) {
             res.send(JSON.stringify(row));
         });
 });
+
 //刪除日期
 router.post('/guide/calendarChange/delete/:gId', async function (req, res) {
     async function postData() {
@@ -193,6 +214,7 @@ router.post('/guide/calendarChange/delete/:gId', async function (req, res) {
     };
     postData();
 });
+
 //新增日期
 router.post('/guide/calendarChange/add/:email', async function (req, res) {
     async function postData() {
@@ -207,14 +229,14 @@ router.post('/guide/calendarChange/add/:email', async function (req, res) {
 });
 
 // 去個人頁面
-router.get('/guide/goto/personal/:gId', async function(req, res) {
+router.get('/guide/goto/personal/:gId', async function (req, res) {
     let sql = "select m.id from member m join guide g using (email) where g.guide_id = ?";
     let result = await query(sql, [req.params.gId]);
     res.send(result);
 })
 
 //撈gid
-router.get('/guide/guide_id/:email', async function(req, res) {
+router.get('/guide/guide_id/:email', async function (req, res) {
     let sql = "select guide_id from guide where email = ?";
     let result = await query(sql, [req.params.email]);
     res.send(result);
@@ -232,8 +254,10 @@ router.get(`/personalCalendar/:email`, async function (req, res) {
     let sql3 = 'select DISTINCT e.location, e.date, e.eventID from event e Join event_apply_member a using (eventID) where post_email = ? or (a.apply_member_email = ? and a.confirmed =1 )';
     let result3 = await query(sql3, [req.params.email, req.params.email]);
     //結合
-    let results =[result1, result2, result3]
+    let results = [result1, result2, result3]
     res.send(results);
-}); 
+});
+
+
 
 module.exports = router;

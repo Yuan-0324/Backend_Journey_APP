@@ -215,6 +215,18 @@ router.post('/safety/set', function (req, res) {
 
 //---------------忘記密碼---------------
 
+router.put('/general/setPassword', function (req, res) {
+    // new promise((resolve, reject)=>{
+    console.log(req.body);
+    let myHash = bcrypt.hashSync(req.body.password, 10);
+
+    conn.query('UPDATE `member` SET `password`= ? WHERE email = ?',
+        [myHash, req.body.email],
+        function (err, row) {
+            res.send(row);
+        })
+})
+
 //--------------- 隱私設定/privacy/block ---------------
 router.post('/privacy/block', function (req, res) {
     // new promise((resolve, reject)=>{

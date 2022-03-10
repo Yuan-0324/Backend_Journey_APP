@@ -1,91 +1,65 @@
 const express = require('express');
 const router = express.Router();
 const conn = require('../mysql');//資料庫連接
+var URL = require('url');
+var Client = require("node-rest-client").Client;
+var client = new Client();
 const jwt = require('jsonwebtoken');
 const config = require('../config/token');
 const bcrypt = require('bcrypt');//加解密
 //備註:promise postman 無法用，要用時res.send要改成resolve
 
 
+let query = function (sql, values) {
+  return new Promise((resolve, reject) => {
+    conn.query(sql, values, function (err, rows) {
+      if (err) {
+        // console.log(err);
+      } else {
+        resolve(rows);
+      }
+    })
+  })
+}
+
 //--------------- Context---------------
 router.post('/context', function (req, res) {
-  // console.log(req.body);
-
-  //字串處理
-  // let catchEmail = JSON.stringify(req.body);
-  // let email = catchEmail.substring(2, catchEmail.length - 5);
-  // console.log(email);
-  // `lastName`, `firstName`, `birthday`, `id`, `email`, `place`
-  // 'SELECT m.`lastName`, m.`firstName`, m.`birthday`, m.`id`, m.`email`, m.`place`, m.`interested`, g.`guide_id` FROM `member` m JOIN guide g USING (email) WHERE email =?'
-  conn.query('SELECT m.`member_is_guide`, m.`api_selfie`, m.`lastName`, m.`firstName`, m.`birthday`, m.`id`, m.`email`, m.`place`, m.`interested` FROM `member` m WHERE email =?',
-    [req.body.email],
-    function (err, row) {
-      // console.log(row);
-      res.send(JSON.stringify(row));
-      // console.log(row);
-    })
+  let context = async () => {
+    let sql = 'SELECT m.`member_is_guide`, m.`api_selfie`, m.`lastName`, m.`firstName`, m.`birthday`, m.`id`, m.`email`, m.`place`, m.`interested` FROM `member` m WHERE email =?';
+    let result = await query(sql, req.body.email);
+    res.send(result);
+  }
+  context();
 })
 
-
-//---------------localstorage有紀錄，重新GET資料 /relog---------------
-
-//備註:localstorage有資料紀錄，每次開起要將資料重新get
-//優先取selfie，selfie沒有才取api_selfie
-router.post("/relog", function (req, res) {
-  // new promise((resolve, reject)=>{
-  conn.query('SELECT `selfie`, `api_selfie`, `lastName`, `firstName`, `place` FROM `member` WHERE email = ?',
-    [req.body.email], function (err, row) {
-      res.send(row)
-    })
-  // })
-});
-
-
-//--------------- POST---------------
+// function apple(){
+//   let myHash = bcrypt.hashSync(`123123`, 10);
+//   console.log(myHash);
+// }
+// apple();
 
 //--------------- 手動註冊/member/signup---------------
-
 router.post('/member/signup', function (req, res) {
-  // new promise((resolve, reject)=>{
-  //-----加密處理-----
-  // const saltRounds = 10;
-  // var myPassword = req.body.password;// 使用者密碼
-  // let myHash = '$2a$10$fok18OT0R/cWoR0a.VsjjuuYZV.XrfdYd5CpDWrYkhi1F0i8ABp6e';// 加密後密碼
-  // bcrypt.genSalt(saltRounds, function (err, salt) {
-  //   bcrypt.hash(myPassword, salt, function (err, hash) {
-  //     console.log(typeof hash);
-  //     myPassword = hash;
-  //     console.log(myPassword);
-  //   });
-  // });
-  console.log(req.body);
-  conn.query('INSERT INTO `member`(`email`, `password`,`lastName`,`firstName`,`place`,`birthday`,`phone`,`interested`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [req.body.email, req.body.password, req.body.lastName, req.body.firstName, req.body.place, req.body.birthday, req.body.phone, req.body.interested],
-    function (err, row) {
-      res.send('註冊成功');
-    }
-  )
-  // })
+  let sign_up = async () => {
+    let myHash = bcrypt.hashSync(req.body.password, 10);
+    let sql = 'INSERT INTO `member`(`email`, `password`,`lastName`,`firstName`,`place`,`birthday`,`phone`,`interested`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+    let result = await query(sql, [req.body.email, myHash, req.body.lastName, req.body.firstName, req.body.place, req.body.birthday, req.body.phone, req.body.interested]);
+    res.send("註冊成功");
+  }
+  sign_up();
 });
 
 //--------------- Google Facebook註冊/api/signup ---------------
-
-//備註:`place`資料 login api 沒有提供，要另外抓近來在post到後端
 router.post("/api/signup", function (req, res) {
-  // new promise((resolve, reject)=>{
-  console.log(req.body);
-  conn.query('INSERT INTO `member`(`email`, `lastName`, `firstName`) VALUES (?, ?, ?)',
-    [req.body.email, req.body.lastName, req.body.firstName],
-    function (err, row) {
-      res.send('註冊成功');
-    }
-  )
-  // })
+  let api_sign_up = async () => {
+    let sql = 'INSERT INTO `member`(`email`, `lastName`, `firstName`) VALUES (?, ?, ?)';
+    let result = await query(sql, [req.body.email, req.body.lastName, req.body.firstName])
+    res.send('註冊成功');
+  }
+  api_sign_up();
 });
 
-//--------------- 登入/member/login ---------------
-
-//--------------- Token Check ---------------
+//--------------- 驗證Token ---------------
 router.post('/member/login/token', function (req, res) {
   let catchToken = JSON.stringify(req.body);
   let firstToken = catchToken.substring(0, catchToken.length - 5);
@@ -97,90 +71,33 @@ router.post('/member/login/token', function (req, res) {
     } else {
       res.send('ok');
     }
-
   })
 })
 
-//備註:取到的個人資料存到 localstorage 做為每頁選染用
+//--------------- 一般登入/member/login ---------------
+
+//備註:取到的個人資料存到localStorage 做為每頁選染用
 router.post('/member/login', function (req, res) {
-  // console.log(req.body);
-  // new promise((resolve, reject)=>{
-  conn.query('SELECT password FROM member WHERE email = ?', [req.body.email],
-    function (err, row) {
-      console.log(JSON.stringify(row));
-      if (row == '') {
-        res.send('信箱尚未被註冊');
-        // console.log('信箱尚未被註冊');
-        console.log(row);
-      }
-      else {
-        //-----解密處理-----
-        console.log(req.body);
-        // console.log(row)
-        const hashPassword = row[0].password; // 資料庫加密後的密碼
-        const userPassword = req.body.password; // 使用者登入輸入的密碼
-        const payload = {
-          "iss": 'Journey Server',
-          "sub": 'Login',
-          "jti": 'Login Token'
-        };
-        const token = jwt.sign(payload, config.jwtKey, { expiresIn: '7d' });
-        // bcrypt.compare(userPassword, hashPassword, function (err, res) {
-        if (hashPassword == userPassword) {
-          conn.query('SELECT m.`member_is_guide`, m.`api_selfie`, m.`lastName`, m.`firstName`, m.`birthday`, m.`id`, m.`email`, m.`place`, m.`interested` FROM `member` m WHERE email =?',
-            [req.body.email], function (err, row) {
-              console.log(row);
-              res.send({
-                message: "登入成功",
-                api_selfie: row[0].api_selfie,
-                id: row[0].id,
-                email: row[0].email,
-                lastName: row[0].lastName,
-                firstName: row[0].firstName,
-                name: row[0].lastName + row[0].firstName,
-                place: row[0].place,
-                interested: row[0].interested,
-                member_is_guide: row[0].member_is_guide,
-                token
-              });
-            })
-        } else {
-          res.send('密碼錯誤')
-        }
-        // });
-      }
+  let login = async () => {
+    let sql = 'SELECT password FROM member WHERE email = ?';
+    let result = await query(sql, req.body.email)
+    if (result.length == 0) {
+      res.send('信箱尚未被註冊');
     }
-  )
-  // })
-})
-
-//--------------- Google Facebook登入/api/login ---------------
-
-//備註:以回傳的email找到資料庫，取個人帳戶設定的資料，個人資料存到 localstorage 做為每頁選染用
-//如果沒有資料就用api提供的資料
-router.post("/api/login", function (req, res) {
-  // console.log(req.body);
-  // new promise((resolve, reject)=>{
-  conn.query('SELECT m.`api_selfie`, m.`lastName`, m.`firstName`, m.`birthday`, m.`id`, m.`email`, m.`place`, m.`interested` FROM `member` m WHERE email =?',
-    [req.body.email],
-    function (err, row) {
-      // console.log(JSON.stringify(row));
-      if (row == '') {
-        res.send('信箱尚未被註冊');
-        // console.log('信箱尚未被註冊');
-        // console.log(row);
-      } else {
-        const payload = {
+    else {
+      // console.log(req.body.password);
+      // console.log(result[0].password);
+      let verify = bcrypt.compareSync(req.body.password, result[0].password)
+      if (verify) {
+        let payload = {
           "iss": 'Journey Server',
           "sub": 'Login',
           "jti": 'Login Token'
         };
-        const token = jwt.sign(payload, config.jwtKey, { expiresIn: '7d' });
-        // bcrypt.compare(userPassword, hashPassword, function (err, res) {
-        conn.query('SELECT `member_is_guide`, `id`,`email`, `api_selfie`, `lastName`, `firstName`, `place` FROM member WHERE email = ?',
-          [req.body.email], function (err, row) {
-            console.log(row[0].id);
-            // res.send(row[0]);
+        let token = jwt.sign(payload, config.jwtKey, { expiresIn: '7d' });
+        let sql = 'SELECT m.`member_is_guide`, m.`api_selfie`, m.`lastName`, m.`firstName`, m.`birthday`, m.`id`, m.`email`, m.`place`, m.`interested` FROM `member` m WHERE email =?';
+        let result = await query(sql, req.body.email)
+          .then((row) => {
             res.send({
               message: "登入成功",
               api_selfie: row[0].api_selfie,
@@ -195,17 +112,128 @@ router.post("/api/login", function (req, res) {
               token
             });
           })
-        // });
+          .catch((err) => {
+            console.log(err);
+          })
+      } else {
+        res.send('密碼錯誤');
       }
     }
+  }
+  login();
+})
 
-  )
+//--------------- Line登入 ---------------
+router.post('/lineapi/login', function (req, res) {
+  // console.log(req.body);
+  const CLIENT_SECRET = 'c985b34cdd358c9b39d6fbb5b233c927';
+  const CLIENT_ID = '1656960165';
 
-  // conn.query('SELECT `selfie`, `lastName`, `firstName`, `place` FROM `member` WHERE `email` = ?',
-  //   [req.body.email], function (err, row) {
-  //     res.send(row)
-  //   })
-  // })
+  const data = {
+    grant_type: 'authorization_code',
+    code: req.body.code,
+    redirect_uri: 'http://localhost:3000/',
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET
+  }
+
+  const args = {
+    data: data,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+  }
+  client.post("https://api.line.me/oauth2/v2.1/token", args, function (data, row) {
+    // console.log(data);
+    try {
+      let payload = {
+        "iss": 'Journey Server',
+        "sub": 'Login',
+        "jti": 'Login Token'
+      };
+      var token = jwt.sign(payload, config.jwtKey, { expiresIn: '7d' });
+    } catch (err) {
+      // err
+      console.log(err);
+    }
+
+    const data2 = {
+      id_token: data.id_token,
+      client_id: CLIENT_ID,
+      // access_token: data.access_token
+    }
+    const arg2 = {
+      data: data2,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    }
+    // console.log(token);
+    client.post("https://api.line.me/oauth2/v2.1/verify", arg2, function (data, row) {
+      // console.log(data);
+      let totalData = {
+        data: data,
+        token: token
+      }
+      try {
+        res.status(200).send(totalData);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+  })
+
+})
+
+
+
+
+
+
+//--------------- Google Facebook登入/api/login ---------------
+
+//備註:以回傳的email找到資料庫，取個人帳戶設定的資料，個人資料存到 localstorage 做為每頁選染用
+router.post("/api/login", function (req, res) {
+  let api_login = async () => {
+    let sql = 'SELECT m.`api_selfie`, m.`lastName`, m.`firstName`, m.`birthday`, m.`id`, m.`email`, m.`place`, m.`interested` FROM `member` m WHERE email =?';
+    let result = query(sql, req.body.email)
+      .then((row) => {
+        if (row.length == 0) {
+          res.send('信箱尚未被註冊');
+        }
+        else {
+          let payload = {
+            "iss": 'Journey Server',
+            "sub": 'Login',
+            "jti": 'Login Token'
+          };
+          let token = jwt.sign(payload, config.jwtKey, { expiresIn: '7d' });
+          let sql = 'SELECT `member_is_guide`, `id`,`email`, `api_selfie`, `lastName`, `firstName`, `place` FROM member WHERE email = ?';
+          let result = async () => {
+            query(sql, req.body.email)
+              .then((row) => {
+                res.send({
+                  message: "登入成功",
+                  api_selfie: row[0].api_selfie,
+                  id: row[0].id,
+                  email: row[0].email,
+                  lastName: row[0].lastName,
+                  firstName: row[0].firstName,
+                  name: row[0].lastName + row[0].firstName,
+                  place: row[0].place,
+                  interested: row[0].interested,
+                  member_is_guide: row[0].member_is_guide,
+                  token
+                });
+              })
+              .catch((err) => {
+                console.log(err);
+              })
+          }
+          result();
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+  }
+  api_login();
 });
 
 //--------------- 取嚮導ID ---------------

@@ -22,9 +22,6 @@ var app = express();
 
 const server = http.createServer(app);
 
-server.listen(8000, () => {
-    console.log("Server Start: http://127.0.0.1:8000")
-})
 
 // ------------------------------------------
 
@@ -39,11 +36,11 @@ app.use(session({
     secret: 'key that will sign cookie',
     resave: false,
     saveUninitialized: false,
-}))
+}));
 
-app.use(bodyParser.json({limit: "50mb"}));
-app.use(express.json({limit : '2100000kb'}));
-app.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit:50000}));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(express.json({ limit: '2100000kb' }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true, parameterLimit: 50000 }));
 
 
 // -------------- stock.io -----------------
@@ -55,14 +52,39 @@ const io = new Server(server, {
     }
 });
 
+let users = {};
 io.on("connection", socket => {
-    console.log("USER_CONNECT_ID ", socket.id);
+    // console.log("USER_CONNECT_ID ", socket.id);
 
-
-
-    socket.on("disconnect", () =>{
-        console.log(socket.id, " DISCONNECT")
+    socket.on("disconnect", () => {
+    //     // console.log(socket.id, " DISCONNECT")
+    //     // --- 關視窗後把自己移除 ---
+    //     for (let user in users) {
+    //         if (users[user].socketID === socket.id) {
+    //             delete users[user];
+    //         }
+    //     }
+    //     io.emit('all_user', users);
     })
+
+
+
+    // --- 取得現在使用者資訊 ---
+    socket.on("new_user", uesrname => {
+        // console.log('SERVER: ' + JSON.stringify(uesrname));
+        users[uesrname.email] = { ...uesrname, socketID: socket.id };
+        io.emit('all_user', users);
+    })
+
+    socket.on("send_message", msg => {
+        // console.log(msg);
+        const socketID = msg.receiver.socketID;
+        io.to(socketID).emit("new_message", msg);
+    })
+})
+
+server.listen(8000, () => {
+    console.log("Server Start: http://127.0.0.1:8000");
 })
 
 // --------------- 資料庫連接 ---------------
