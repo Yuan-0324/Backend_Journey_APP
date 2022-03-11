@@ -243,6 +243,12 @@ router.post('/personal/invitation/reply/guide/send/', async function (req, res) 
   res.send(result);
 })
 // 收到 嚮導 
+router.post('/personal/invitation/reply/guide/receive', async function (req, res) {
+  let sql = "SELECT gmr.`guide_email`,gmr.`reservation_number`, gmr.`reservation_date`, gmr.`order_date`, gmr.`confirmed`, g.`location`, m.`api_selfie`, m.`lastName`, m.`firstName` FROM `guide_member_reservation` gmr JOIN `guide` g ON (gmr.`guide_email` = g.`email`) JOIN `member` m ON (gmr.`member_email`= m.`email`) WHERE gmr.`guide_email` = ? AND gmr.`confirmed` IS NULL"
+  let result = await query(sql, [req.body.email]);
+  res.send(result);
+})
+
 
 // 發送 活動
 router.post('/personal/invitation/reply/activity/send', async function (req, res) {
@@ -251,6 +257,19 @@ router.post('/personal/invitation/reply/activity/send', async function (req, res
   res.send(result);
 })
 // 收到 活動
+router.post('/personal/invitation/reply/activity/receive', async function (req, res) {
+  let sql = "SELECT eam.`apply_member_email`, eam.`eventID`, eam.`confirmed`, eam.`apply_date`, e.`title`, m.`firstName`, m.`lastName`, m.`api_selfie` FROM `event_apply_member` eam JOIN `member` m ON (eam.`apply_member_email` = m.`email`) JOIN `event` e USING (`eventID`) WHERE e.`post_email` = ? AND eam.`confirmed` IS NULL";
+  let result = await query(sql, [req.body.email]);
+  let events = {};
+  result.forEach(item => {
+    if (item.eventID in events) {
+      events[item.eventID] = [...events[item.eventID], { ...item}];
+    } else {
+      events[item.eventID] = [{...item}];
+    }
+  })
+  res.send(events);
+})
 
 // 發送 社團
 router.post('/personal/invitation/reply/society/send', async function (req, res) {
@@ -259,6 +278,11 @@ router.post('/personal/invitation/reply/society/send', async function (req, res)
   res.send(result);
 })
 // 收到 社團
+router.post('/personal/invitation/reply/society/receive', async function (req, res) {
+  let sql = "SELECT smr.`member_email`, smr.`society_name`, smr.`apply_date`, smr.`confirmed_join`, smr.`societyID` FROM `society_member_right` smr JOIN `member` m ON (smr.`member_email` = m.`email`) WHERE smr.`member_email` = ? AND smr.`confirmed_join` IS NULL";
+  let result = await query(sql, [req.body.email]);
+  res.send(result);
+})
 
 // ------ 通知 POST 總集 --------
 
@@ -268,18 +292,21 @@ router.delete('/personal/invitation/reply/guide/cancel', async function (req, re
   let result = await query(sql, [req.body.reservation_number, req.body.email]);
   res.send('ok');
 })
+
 // 發送 活動 [ 取消 ]
 router.delete('/personal/invitation/reply/activity/cancel', async function (req, res) {
   let sql = "DELETE FROM `event_apply_member` WHERE `eventID` = ? AND `apply_member_email` = ?";
   let result = await query(sql, [req.body.eventID, req.body.email]);
   res.send('ok');
 })
+
 // 發送 社團 [ 取消 ]
 router.delete('/personal/invitation/reply/society/cancel', async function (req, res) {
   let sql = "DELETE FROM `society_member_right` WHERE `societyID` = ? AND `member_email` = ?";
   let result = await query(sql, [req.body.societyID, req.body.email]);
   res.send('ok')
 })
+
 // 收到 嚮導 [ 接受 / 拒絕 ]
 
 // 收到 活動 [ 接受 / 拒絕 ]
