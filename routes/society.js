@@ -105,7 +105,7 @@ router.put('/editpost/article', async function(req, res) {
 
 // 取社團資訊
 router.post('/society/allgroup',async function(req, res){
-  let getAllGroup = 'SELECT a.societyID, `bg_pic`, `society_name`, society_num , a.`pic_w` , a.`pic_h`, a.`mTop` , a.`mLeft` FROM (SELECT a.`societyID`, `bg_pic`, `society_name`, a.`pic_w` , a.`pic_h`, a.`mTop` , a.`mLeft` FROM society a JOIN (SELECT societyID FROM society_member_right a JOIN member b WHERE a.member_email = b.email and b.id = 1 and a.confirmed_join=1) b WHERE a.societyID = b.societyID) a JOIN (SELECT societyID, count(member_email) society_num from society_member_right GROUP by societyID) b WHERE a.societyID = b.societyID';
+  let getAllGroup = 'SELECT a.societyID, `bg_pic`, `society_name`, society_num , a.`pic_w` , a.`pic_h`, a.`mTop` , a.`mLeft` FROM (SELECT a.`societyID`, `bg_pic`, `society_name`, a.`pic_w` , a.`pic_h`, a.`mTop` , a.`mLeft` FROM society a JOIN (SELECT societyID FROM society_member_right a JOIN member b WHERE a.member_email = b.email and b.id = ? and a.confirmed_join=1) b WHERE a.societyID = b.societyID) a JOIN (SELECT societyID, count(member_email) society_num from society_member_right GROUP by societyID) b WHERE a.societyID = b.societyID';
   let result = await query(getAllGroup,[req.body.userId]);
   try {
     result.map((elm,idx)=>{
@@ -121,7 +121,7 @@ router.post('/society/allgroup',async function(req, res){
 
 // 取推薦社團資訊
 router.post('/society/recommendgroup',async function(req, res){
-  let getAllGroup = "select distinct * from (SELECT g.societyID,i.bg_pic, i.society_name, society_num from (SELECT f.societyID, COUNT(f.member_email) from (SELECT societyID, society_name , c.member_email FROM society_member_right c JOIN (SELECT a.member_email from member_follow a join member b where a.followed_email = b.email and id = 1 ) e WHERE c.member_email = e.member_email) f group by f.societyID) g join (SELECT societyID, count(member_email) society_num from society_member_right GROUP by societyID) h join society i WHERE g.societyID = h.societyID and h.societyID = i.societyID)j where not exists ( select * from (SELECT a.societyID, `bg_pic`, `society_name`, society_num FROM (SELECT a.`societyID`, `bg_pic`, `society_name` FROM society a JOIN (SELECT societyID FROM society_member_right a JOIN member b WHERE a.member_email = b.email and b.id = 1) b WHERE a.societyID = b.societyID) a JOIN (SELECT societyID, count(member_email) society_num from society_member_right GROUP by societyID) b WHERE a.societyID = b.societyID) k where societyID = j.societyID)";
+  let getAllGroup = "select distinct * from (SELECT g.societyID,i.bg_pic, i.society_name, society_num from (SELECT f.societyID, COUNT(f.member_email) from (SELECT societyID, society_name , c.member_email FROM society_member_right c JOIN (SELECT a.member_email from member_follow a join member b where a.followed_email = b.email and id = ? ) e WHERE c.member_email = e.member_email) f group by f.societyID) g join (SELECT societyID, count(member_email) society_num from society_member_right GROUP by societyID) h join society i WHERE g.societyID = h.societyID and h.societyID = i.societyID)j where not exists ( select * from (SELECT a.societyID, `bg_pic`, `society_name`, society_num FROM (SELECT a.`societyID`, `bg_pic`, `society_name` FROM society a JOIN (SELECT societyID FROM society_member_right a JOIN member b WHERE a.member_email = b.email and b.id = ?) b WHERE a.societyID = b.societyID) a JOIN (SELECT societyID, count(member_email) society_num from society_member_right GROUP by societyID) b WHERE a.societyID = b.societyID) k where societyID = j.societyID)";
   let result = await query(getAllGroup,[req.body.userId,req.body.userId]);
     try {
       result.map((elm,idx)=>{
@@ -231,8 +231,12 @@ router.post('/group/bgpic/:id',async function(req, res){
 //存入社團照片 
 router.post('/society/media',async function(req, res){
   console.log(req.body.societyID,req.body.url);
+  let societyID = req.body.soceityID;
+  if(societyID==null){
+    societyID = 0;
+  }
     let getAllGroup = 'INSERT INTO `society_media`(`societyID`, `media`) VALUES (?,?)';
-    let result = await query(getAllGroup,[req.body.societyID,req.body.url]);
+    let result = await query(getAllGroup,[societyID,req.body.url]);
     console.log(result);
     // res.send(result);
 })

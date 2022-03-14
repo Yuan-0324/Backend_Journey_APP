@@ -1,7 +1,7 @@
 // --------------- 模組導入 ---------------
 
 const express = require('express');
-const cors = require("cors");//不太懂
+const cors = require("cors"); //不太懂
 const bodyParser = require('body-parser');
 const http = require('http');
 const { Server } = require('socket.io')
@@ -57,14 +57,14 @@ io.on("connection", socket => {
     // console.log("USER_CONNECT_ID ", socket.id);
 
     socket.on("disconnect", () => {
-    //     // console.log(socket.id, " DISCONNECT")
-    //     // --- 關視窗後把自己移除 ---
-    //     for (let user in users) {
-    //         if (users[user].socketID === socket.id) {
-    //             delete users[user];
-    //         }
-    //     }
-    //     io.emit('all_user', users);
+        // // console.log(socket.id, " DISCONNECT")
+        // // --- 關視窗後把自己移除 ---
+        // for (let user in users) {
+        //     if (users[user].socketID === socket.id) {
+        //         delete users[user];
+        //     }
+        // }
+        // io.emit('all_user', users);
     })
 
 
